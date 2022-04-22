@@ -226,21 +226,20 @@ class CRNN(object):
 
         cnn_output = CNN(inputs)
         reshaped_cnn_output = tf.squeeze(cnn_output, [2])
+        # reshaped_cnn_output = tf.reshape(cnn_output, [batch_size, -1, 512])
         max_char_count = cnn_output.get_shape().as_list()[1]
 
         crnn_model = BidirectionnalRNN(reshaped_cnn_output, seq_len)
-
         logits = tf.reshape(crnn_model, [-1, 512])
+
         W = tf.Variable(
             tf.truncated_normal([512, self.NUM_CLASSES], stddev=0.1), name="W"
         )
         b = tf.Variable(tf.constant(0.0, shape=[self.NUM_CLASSES]), name="b")
-
         logits = tf.matmul(logits, W) + b
         logits = tf.reshape(
             logits, [tf.shape(cnn_output)[0], max_char_count, self.NUM_CLASSES]
         )
-
         # Final layer, the output of the BLSTM
         logits = tf.transpose(logits, (1, 0, 2))
 
@@ -291,8 +290,7 @@ class CRNN(object):
                         [self.optimizer, self.decoded, self.cost, self.acc],
                         feed_dict={
                             self.inputs: batch_x,
-                            self.seq_len: [self.max_char_count]
-                            * self.data_manager.batch_size,
+                            self.seq_len: [self.max_char_count] * self.data_manager.batch_size,
                             self.targets: batch_dt,
                         },
                     )
@@ -312,8 +310,7 @@ class CRNN(object):
 
                 self.save_frozen_model("save/frozen.pb")
 
-                print("[{}] Iteration loss: {} Error rate: {}".format(
-                    self.step, iter_loss, acc))
+                print("[{}] Iteration loss: {} Error rate: {}".format(self.step, iter_loss, acc))
 
                 self.step += 1
         return None
@@ -326,8 +323,7 @@ class CRNN(object):
                     self.decoded,
                     feed_dict={
                         self.inputs: batch_x,
-                        self.seq_len: [self.max_char_count]
-                        * self.data_manager.batch_size,
+                        self.seq_len: [self.max_char_count]  * self.data_manager.batch_size,
                     },
                 )
 

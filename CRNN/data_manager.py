@@ -1,26 +1,25 @@
-import re
 import os
-import numpy as np
-import tensorflow as tf
 from multiprocessing import Queue, Process
-from utils import sparse_tuple_from, resize_image, label_to_array
 
+import numpy as np
 from scipy.misc import imread
 from trdg.generators import GeneratorFromDict
+
+from utils import sparse_tuple_from, resize_image, label_to_array
 
 
 class DataManager(object):
     def __init__(
-        self,
-        batch_size,
-        model_path,
-        examples_path,
-        max_image_width,
-        train_test_ratio,
-        max_char_count,
-        char_vector,
-        use_trdg,
-        language,
+            self,
+            batch_size,
+            model_path,
+            examples_path,
+            max_image_width,
+            train_test_ratio,
+            max_char_count,
+            char_vector,
+            use_trdg,
+            language,
     ):
         if train_test_ratio > 1.0 or train_test_ratio < 0:
             raise Exception("Incoherent ratio!")
@@ -100,7 +99,7 @@ class DataManager(object):
         """Load all the images in the folder
         """
 
-        print("Loading data")
+        print("Loading data...")
 
         examples = []
 
@@ -137,14 +136,16 @@ class DataManager(object):
                 *self.data[old_offset:new_offset]
             )
 
+            # 图片标签数组
             batch_y = np.reshape(np.array(raw_batch_y), (-1))
 
-            batch_dt = sparse_tuple_from(np.reshape(np.array(raw_batch_la), (-1)))
+            # 图片标签稀疏矩阵
+            a = np.array(raw_batch_la)
+            batch_dt = sparse_tuple_from(a)
 
+            # 图像数据。将三维张量的第1维和第2维交换。即内部的二维矩阵行列转换。
             raw_batch_x = np.swapaxes(raw_batch_x, 1, 2)
-
             raw_batch_x = raw_batch_x / 255.0
-
             batch_x = np.reshape(
                 np.array(raw_batch_x), (len(raw_batch_x), self.max_image_width, 32, 1)
             )
@@ -167,7 +168,9 @@ class DataManager(object):
 
             batch_y = np.reshape(np.array(raw_batch_y), (-1))
 
-            batch_dt = sparse_tuple_from(np.reshape(np.array(raw_batch_la), (-1)))
+            a = np.array(raw_batch_la)
+            # b = np.reshape(a, (-1))
+            batch_dt = sparse_tuple_from(a)
 
             raw_batch_x = np.swapaxes(raw_batch_x, 1, 2)
 
