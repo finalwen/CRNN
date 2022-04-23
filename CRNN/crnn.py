@@ -19,16 +19,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 class CRNN(object):
     def __init__(
-        self,
-        batch_size,
-        model_path,
-        examples_path,
-        max_image_width,
-        train_test_ratio,
-        restore,
-        char_set_string,
-        use_trdg,
-        language,
+            self,
+            batch_size,
+            model_path,
+            examples_path,
+            max_image_width,
+            train_test_ratio,
+            restore,
+            char_set_string,
+            use_trdg,
+            language,
     ):
         self.step = 0
         self.CHAR_VECTOR = char_set_string
@@ -86,9 +86,101 @@ class CRNN(object):
         )
 
     def crnn(self, max_width):
-        def BidirectionnalRNN(inputs, seq_len):
+
+        def CNN(inputs):
             """
-                Bidirectionnal LSTM Recurrent Neural Network part
+            Convolutional Neural Networks
+            """
+
+            # 64 / 3 x 3 / 1 / 1
+            conv1 = tf.layers.conv2d(
+                inputs=inputs,
+                filters=64,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            # 2 x 2 / 2
+            pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
+
+            # 128 / 3 x 3 / 1 / 1
+            conv2 = tf.layers.conv2d(
+                inputs=pool1,
+                filters=128,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            # 2 x 2 / 2
+            pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
+
+            # 256 / 3 x 3 / 1 / 1
+            conv3 = tf.layers.conv2d(
+                inputs=pool2,
+                filters=256,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            # 256 / 3 x 3 / 1 / 1
+            conv4 = tf.layers.conv2d(
+                inputs=conv3,
+                filters=256,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            # 1 x 2 / 2
+            pool3 = tf.layers.max_pooling2d(
+                inputs=conv4, pool_size=[1, 2], strides=2, padding="same"
+            )
+
+            # 512 / 3 x 3 / 1 / 1
+            conv5 = tf.layers.conv2d(
+                inputs=pool3,
+                filters=512,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            # Batch normalization layer
+            b_norm1 = tf.layers.batch_normalization(conv5)
+
+            # 512 / 3 x 3 / 1 / 1
+            conv6 = tf.layers.conv2d(
+                inputs=b_norm1,
+                filters=512,
+                kernel_size=(3, 3),
+                padding="same",
+                activation=tf.nn.relu,
+            )
+
+            b_norm2 = tf.layers.batch_normalization(conv6)
+
+            # 1 x 2 / 2
+            pool4 = tf.layers.max_pooling2d(
+                inputs=b_norm2, pool_size=[1, 2], strides=2, padding="same"
+            )
+
+            # 512 / 2 x 2 / 1 / 0
+            conv7 = tf.layers.conv2d(
+                inputs=pool4,
+                filters=512,
+                kernel_size=(2, 2),
+                padding="valid",
+                activation=tf.nn.relu,
+            )
+
+            return conv7
+
+        def BidirectionalRNN(inputs, seq_len):
+            """
+                Bidirectional LSTM Recurrent Neural Network part
             """
 
             with tf.variable_scope(None, default_name="bidirectional-rnn-1"):
@@ -98,7 +190,11 @@ class CRNN(object):
                 lstm_bw_cell_1 = rnn.BasicLSTMCell(256)
 
                 inter_output, _ = tf.nn.bidirectional_dynamic_rnn(
-                    lstm_fw_cell_1, lstm_bw_cell_1, inputs, seq_len, dtype=tf.float32
+                    lstm_fw_cell_1,
+                    lstm_bw_cell_1,
+                    inputs,
+                    seq_len,
+                    dtype=tf.float32
                 )
 
                 inter_output = tf.concat(inter_output, 2)
@@ -121,98 +217,6 @@ class CRNN(object):
 
             return outputs
 
-        def CNN(inputs):
-            """
-                Convolutionnal Neural Network part
-            """
-
-            # 64 / 3 x 3 / 1 / 1
-            conv1 = tf.layers.conv2d(
-                inputs=inputs,
-                filters=64,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # 2 x 2 / 1
-            pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
-
-            # 128 / 3 x 3 / 1 / 1
-            conv2 = tf.layers.conv2d(
-                inputs=pool1,
-                filters=128,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # 2 x 2 / 1
-            pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
-
-            # 256 / 3 x 3 / 1 / 1
-            conv3 = tf.layers.conv2d(
-                inputs=pool2,
-                filters=256,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # Batch normalization layer
-            bnorm1 = tf.layers.batch_normalization(conv3)
-
-            # 256 / 3 x 3 / 1 / 1
-            conv4 = tf.layers.conv2d(
-                inputs=bnorm1,
-                filters=256,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # 1 x 2 / 1
-            pool3 = tf.layers.max_pooling2d(
-                inputs=conv4, pool_size=[2, 2], strides=[1, 2], padding="same"
-            )
-
-            # 512 / 3 x 3 / 1 / 1
-            conv5 = tf.layers.conv2d(
-                inputs=pool3,
-                filters=512,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # Batch normalization layer
-            bnorm2 = tf.layers.batch_normalization(conv5)
-
-            # 512 / 3 x 3 / 1 / 1
-            conv6 = tf.layers.conv2d(
-                inputs=bnorm2,
-                filters=512,
-                kernel_size=(3, 3),
-                padding="same",
-                activation=tf.nn.relu,
-            )
-
-            # 1 x 2 / 2
-            pool4 = tf.layers.max_pooling2d(
-                inputs=conv6, pool_size=[2, 2], strides=[1, 2], padding="same"
-            )
-
-            # 512 / 2 x 2 / 1 / 0
-            conv7 = tf.layers.conv2d(
-                inputs=pool4,
-                filters=512,
-                kernel_size=(2, 2),
-                padding="valid",
-                activation=tf.nn.relu,
-            )
-
-            return conv7
-
         batch_size = None
         inputs = tf.placeholder(
             tf.float32, [batch_size, max_width, 32, 1], name="input"
@@ -225,12 +229,12 @@ class CRNN(object):
         seq_len = tf.placeholder(tf.int32, [None], name="seq_len")
 
         cnn_output = CNN(inputs)
-        reshaped_cnn_output = tf.squeeze(cnn_output, [2])
-        # reshaped_cnn_output = tf.reshape(cnn_output, [batch_size, -1, 512])
         max_char_count = cnn_output.get_shape().as_list()[1]
+        map_to_sequence = tf.squeeze(cnn_output, [2])
+        # map_to_sequence = tf.squeeze(cnn_output, axis=1)
 
-        crnn_model = BidirectionnalRNN(reshaped_cnn_output, seq_len)
-        logits = tf.reshape(crnn_model, [-1, 512])
+        rnn_output = BidirectionalRNN(map_to_sequence, seq_len)
+        logits = tf.reshape(rnn_output, [-1, 512])
 
         W = tf.Variable(
             tf.truncated_normal([512, self.NUM_CLASSES], stddev=0.1), name="W"
@@ -323,7 +327,7 @@ class CRNN(object):
                     self.decoded,
                     feed_dict={
                         self.inputs: batch_x,
-                        self.seq_len: [self.max_char_count]  * self.data_manager.batch_size,
+                        self.seq_len: [self.max_char_count] * self.data_manager.batch_size,
                     },
                 )
 
@@ -333,11 +337,11 @@ class CRNN(object):
         return None
 
     def save_frozen_model(
-        self,
-        path=None,
-        optimize=False,
-        input_nodes=["input", "seq_len"],
-        output_nodes=["dense_decoded"],
+            self,
+            path=None,
+            optimize=False,
+            input_nodes=["input", "seq_len"],
+            output_nodes=["dense_decoded"],
     ):
         if not path or len(path) == 0:
             raise ValueError("Save path for frozen model is not specified")
